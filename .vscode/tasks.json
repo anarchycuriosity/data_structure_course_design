@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Active File",
+            "type": "shell",
+            "command": "mkdir -p \"${workspaceFolder}/bin\" && \"C:/Program Files/mingw64/bin/g++.exe\" -std=c++20 -Wall -g \"${file}\" -o \"${workspaceFolder}/bin/${fileBasenameNoExtension}.exe\"",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$gcc"
+        }
+    ]
+}
