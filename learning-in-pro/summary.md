@@ -49,3 +49,5 @@ A L G O R I T H M
 当前代码结构已经拆成红黑树头文件、可视化模型后端和 EasyX 前端。阅读时先看 `tree_visualization_model.h/.cpp`，最后再看 `easyx_frontend.cpp`。
 
 EasyX MinGW 25.9.10 已放入 `third_party/easyx`。VS Code 默认构建任务会调用兼容 EasyX 的 TDM-GCC 4.9.2，而不是系统中的 UCRT MinGW 15.2。
+
+若只需要演示，无需安装任何编译器：克隆仓库后运行 `run_easyx.cmd`，它会启动 `release/easyx_red_black_tree.exe`。该发行程序已静态链接所需 C++ 运行库。
