@@ -45,3 +45,5 @@ A L G O R I T H M
 - `003_cpp_syntax_bridge_from_oop_to_template.md`：给刚学完构造函数、析构函数、重载/重写的读者准备的 C++ 语法桥，先用熟悉的面向对象概念解释模板、`explicit`、`inline`、`typename`、友元和运算符重载。
 - `002_cpp_language_mechanisms_in_reference_project.md`：进阶阅读，从参考项目反推模板、`typename`、`inline`、`explicit`、友元、迭代器、编译链接和可移植性。建议先读 `003`，再读本篇。
 - `004_easyx_frontend_from_zero.md`：从零解释像素、事件循环、只读快照、中序布局和 EasyX 绘图，配套当前最简窗口前端。
+
+当前代码结构已经拆成红黑树头文件、可视化模型后端和 EasyX 前端。阅读时先看 `tree_visualization_model.h/.cpp`，最后再看 `easyx_frontend.cpp`。

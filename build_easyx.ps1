@@ -1,7 +1,8 @@
 $ErrorActionPreference = "Stop"
 
 $project_root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$source_file = Join-Path $project_root "src\easyx_frontend.cpp"
+$backend_source_file = Join-Path $project_root "src\tree_visualization_model.cpp"
+$frontend_source_file = Join-Path $project_root "src\easyx_frontend.cpp"
 $output_directory = Join-Path $project_root "bin"
 $output_file = Join-Path $output_directory "easyx_red_black_tree.exe"
 
@@ -29,7 +30,7 @@ $batch_file = Join-Path $output_directory "build_easyx_temp.cmd"
 $batch_content = @"
 @call "$developer_shell" -arch=x64 -no_logo
 @if errorlevel 1 exit /b 1
-@cl /nologo /std:c++17 /EHsc /utf-8 /DUNICODE /D_UNICODE "$source_file" /Fe:"$output_file"
+@cl /nologo /std:c++17 /EHsc /utf-8 /DUNICODE /D_UNICODE "$backend_source_file" "$frontend_source_file" /Fe:"$output_file"
 "@
 
 [System.IO.File]::WriteAllText($batch_file, $batch_content, [System.Text.Encoding]::ASCII)

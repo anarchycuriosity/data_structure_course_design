@@ -125,11 +125,15 @@ Linux 桌面同样不会只靠一个 `draw_circle` 系统调用完成绘图。�
 
 这是一种教学友好的简化。潜在代价是每次绘图都复制节点，节点数量非常大时效率不如直接遍历，但课程演示规模下更安全。
 
+### `src/tree_visualization_model.h` 与 `src/tree_visualization_model.cpp`
+
+这是后端适配层。它持有 `RBTree<int>`，负责调用插入、删除和查找，并把快照换算为带屏幕坐标的 `VisualNode`。这两个文件不包含 `graphics.h`，因此即使没有安装 EasyX，也能独立编译和测试。
+
 ### `src/easyx_frontend.cpp`
 
-这是新入口，完全不引用原版 `main.cpp`。
+这是最后一层的新入口，完全不引用原版 `main.cpp`，也不直接操作 `RBTree<int>`。
 
-`Button` 只做矩形点击判断。`assign_inorder_position` 递归计算中序次序。`calculate_positions` 把次序和深度缩放到窗口区域。`draw_tree` 先画父子连线，再画节点圆和数字。`draw_scene` 负责整帧。`read_integer` 负责输入校验。`main` 只组织对象生命周期和事件循环。
+`Button` 只做矩形点击判断。`draw_tree` 只消费后端给出的 `VisualNode`。`draw_scene` 负责整帧，`read_integer` 负责输入校验，`main` 只组织模型生命周期和事件循环。构建脚本也把该文件放在后端源文件之后。
 
 ### `build_easyx.ps1`
 
