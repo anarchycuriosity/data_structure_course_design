@@ -37,7 +37,7 @@ A L G O R I T H M
 
 ## 外部参考项目
 
-`reference-projects/red-black-tree-template` 是以 Git 子模块引入的 MIT 许可参考实现。它包含完整插入、删除、性质检查、测试和 Graphviz 可视化。现已在核心头文件和测试入口补充中文教学注释，重点解释模板、迭代器和修复状态。该项目偏性能实现，仍包含 GNU 扩展、变长数组、过时 API 和不符合本课程规范的命名，因此只用于对照行为与测试思路，不应直接复制为作业代码。
+`reference-projects/red-black-tree-template` 是以 Git 子模块引入的 MIT 许可参考实现。主项目根据当前课程实现需求，将其中的 `rbtree.h` 原样复制为 `src/rbtree.h`，并用文件哈希确认内容一致。以后阅读原理可对照子模块，实际编译则使用主项目内的副本。
 
 ## 文档索引
 
@@ -47,3 +47,5 @@ A L G O R I T H M
 - `004_easyx_frontend_from_zero.md`：从零解释像素、事件循环、只读快照、中序布局和 EasyX 绘图，配套当前最简窗口前端。
 
 当前代码结构已经拆成红黑树头文件、可视化模型后端和 EasyX 前端。阅读时先看 `tree_visualization_model.h/.cpp`，最后再看 `easyx_frontend.cpp`。
+
+EasyX MinGW 25.9.10 已放入 `third_party/easyx`。VS Code 默认构建任务会调用兼容 EasyX 的 TDM-GCC 4.9.2，而不是系统中的 UCRT MinGW 15.2。

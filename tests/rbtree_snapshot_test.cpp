@@ -1,7 +1,7 @@
 #include <cassert>
 #include <vector>
 
-#include "../reference-projects/red-black-tree-template/rbtree.h"
+#include "../src/rbtree.h"
 
 int main()
 {

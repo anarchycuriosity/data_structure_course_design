@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "../reference-projects/red-black-tree-template/rbtree.h"
+#include "rbtree.h"
 
 // 这一层属于后端：负责保存树、执行操作并计算节点位置。
 // 它完全不知道 EasyX、按钮、鼠标和颜色值。

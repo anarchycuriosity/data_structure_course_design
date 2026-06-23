@@ -2,24 +2,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Active File (GDB)",
+            "name": "Debug EasyX Red-Black Tree",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/${fileBasenameNoExtension}",
+            "program": "${workspaceFolder}\\bin\\easyx_red_black_tree.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/bin/",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "preLaunchTask": "Build Active File",
-            "windows": {
-                "program": "${workspaceFolder}/bin/${fileBasenameNoExtension}.exe",
-                "miDebuggerPath": "C:/Program Files/mingw64/bin/gdb.exe"
-            },
-            "linux": {
-                "miDebuggerPath": "/usr/bin/gdb"
-            }
+            "miDebuggerPath": "C:\\Program Files (x86)\\Dev-Cpp\\MinGW64\\bin\\gdb.exe",
+            "preLaunchTask": "Build EasyX Red-Black Tree"
         }
     ]
 }

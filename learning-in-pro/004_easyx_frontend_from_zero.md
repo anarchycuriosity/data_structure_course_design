@@ -113,9 +113,11 @@ Linux 桌面同样不会只靠一个 `draw_circle` 系统调用完成绘图。�
 
 ## 项目源码映射
 
-### `reference-projects/red-black-tree-template/rbtree.h`
+### `src/rbtree.h`
 
-这是数据结构层。界面只调用：
+这是从 `reference-projects/red-black-tree-template/rbtree.h` 逐字节复制到主项目的版本，包含原有中文注释。复制后使用 SHA-256 校验，确保两份文件完全一致。主项目编译时只引用 `src/rbtree.h`，不再跨子模块路径引用头文件。
+
+这是数据结构层。后端模型只调用：
 
 - `insert(value)`：插入整数。
 - `remove(value)`：删除整数。
@@ -137,9 +139,22 @@ Linux 桌面同样不会只靠一个 `draw_circle` 系统调用完成绘图。�
 
 ### `build_easyx.ps1`
 
-这是构建脚本。它寻找 Visual Studio 的开发环境，然后用 MSVC 编译 `easyx_frontend.cpp`。当前机器虽然安装了 Visual Studio 2022 C++ 编译器，但还没有 EasyX 的 `graphics.h`，因此首次构建前必须安装 EasyX。
+这是给 VS Code 使用的 MinGW 构建脚本，不依赖 Visual Studio。EasyX 已从官网下载到：
 
-官方安装页：<https://easyx.cn/setup>
+```text
+third_party/easyx/include
+third_party/easyx/lib64
+```
+
+官网下载版本为 `EasyX_for_MinGW 25.9.10`。当前电脑默认的 MinGW 15.2 使用 UCRT，与官方 EasyX 静态库不兼容，会出现 `__imp___iob_func` 链接错误。因此 VS Code 改为调用电脑中已有的 TDM-GCC 4.9.2：
+
+```text
+C:\Program Files (x86)\Dev-Cpp\MinGW64\bin\g++.exe
+```
+
+这只是借用 Dev-C++ 附带的兼容编译器，不需要打开 Dev-C++。编辑、构建和调试仍然全部在 VS Code 完成。
+
+EasyX 官方下载页：<https://easyx.cn/download>
 
 安装后，在 PowerShell 中进入项目根目录并执行：
 
@@ -285,5 +300,5 @@ EasyX 适合快速完成 Windows 教学界面，但它不是跨平台 GUI 框架
 界面不应直接修改树节点；删除后应重新读取整棵树；最简课设先保证正确交互和真实可视化，再考虑动画。
 
 ## 验证
-用 tests/rbtree_snapshot_test.cpp 验证快照父子下标、左右键值关系和删除后数量；安装 EasyX 后运行 build_easyx.ps1 构建窗口程序。
+用 tests/rbtree_snapshot_test.cpp 验证快照父子下标、左右键值关系和删除后数量；在 VS Code 按 `Ctrl+Shift+B`，或运行 build_easyx.ps1 构建窗口程序。
 ```

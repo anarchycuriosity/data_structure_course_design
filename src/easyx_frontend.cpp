@@ -1,10 +1,12 @@
-#include <graphics.h>
-
 #include <cwchar>
 #include <string>
 #include <vector>
 
 #include "tree_visualization_model.h"
+
+// EasyX 定义了 RED、BLACK 等全局宏。
+// 必须在红黑树头文件完成解析后再包含 EasyX，避免宏污染红黑树内部枚举。
+#include <graphics.h>
 
 namespace
 {
