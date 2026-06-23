@@ -24,10 +24,11 @@ A L G O R I T H M
 | 6 | 删除修复 | 什么是黑高亏损 | 能解释双黑节点的修复方向 |
 | 7 | ADT 设计 | 数据结构和操作如何封装 | 能列出 `init/search/insert/remove` 接口 |
 | 8 | 可视化演示 | 如何把树结构映射为界面坐标 | 能展示每一步操作后的树 |
-| 9 | C++ 模板 | 一份树代码如何支持多种键类型 | 能解释 `RBTree<int>` 的实例化过程 |
-| 10 | 封装与显式转换 | `private`、`friend`、`explicit` 如何阻止误用 | 能构造并验证一个隐式转换反例 |
-| 11 | 迭代器与运算符重载 | `++it`、`*it` 如何映射到成员函数 | 能追踪参考项目的后序遍历状态 |
-| 12 | 编译与可移植性 | 标准 C++ 与编译器扩展有何区别 | 能识别 VLA、GNU 语句表达式和过时 API |
+| 9 | 从面向对象过渡到模板 | 构造/析构、重载知识如何连接 `template` | 能把 `T` 暂时替换成 `int` 阅读源码 |
+| 10 | C++ 模板 | 一份树代码如何支持多种键类型 | 能解释 `RBTree<int>` 的实例化过程 |
+| 11 | 封装与显式转换 | `private`、`friend`、`explicit` 如何阻止误用 | 能构造并验证一个隐式转换反例 |
+| 12 | 迭代器与运算符重载 | `++it`、`*it` 如何映射到成员函数 | 能追踪参考项目的后序遍历状态 |
+| 13 | 编译与可移植性 | 标准 C++ 与编译器扩展有何区别 | 能识别 VLA、GNU 语句表达式和过时 API |
 
 ## 当前建议
 
@@ -40,4 +41,5 @@ A L G O R I T H M
 ## 文档索引
 
 - `001_red_black_tree_mission_roadmap.md`：面向零基础读者的旋转详解、红黑修复入门与项目路线。
-- `002_cpp_language_mechanisms_in_reference_project.md`：从参考项目反推模板、`typename`、`inline`、`explicit`、友元、迭代器、编译链接和可移植性。
+- `003_cpp_syntax_bridge_from_oop_to_template.md`：给刚学完构造函数、析构函数、重载/重写的读者准备的 C++ 语法桥，先用熟悉的面向对象概念解释模板、`explicit`、`inline`、`typename`、友元和运算符重载。
+- `002_cpp_language_mechanisms_in_reference_project.md`：进阶阅读，从参考项目反推模板、`typename`、`inline`、`explicit`、友元、迭代器、编译链接和可移植性。建议先读 `003`，再读本篇。
