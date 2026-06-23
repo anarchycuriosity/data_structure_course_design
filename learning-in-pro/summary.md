@@ -29,6 +29,7 @@ A L G O R I T H M
 | 11 | 封装与显式转换 | `private`、`friend`、`explicit` 如何阻止误用 | 能构造并验证一个隐式转换反例 |
 | 12 | 迭代器与运算符重载 | `++it`、`*it` 如何映射到成员函数 | 能追踪参考项目的后序遍历状态 |
 | 13 | 编译与可移植性 | 标准 C++ 与编译器扩展有何区别 | 能识别 VLA、GNU 语句表达式和过时 API |
+| 14 | EasyX 最简前端 | 如何把树状态映射成线、圆、文字和按钮 | 能追踪一次点击到整帧重绘的数据流 |
 
 ## 当前建议
 
@@ -43,3 +44,4 @@ A L G O R I T H M
 - `001_red_black_tree_mission_roadmap.md`：面向零基础读者的旋转详解、红黑修复入门与项目路线。
 - `003_cpp_syntax_bridge_from_oop_to_template.md`：给刚学完构造函数、析构函数、重载/重写的读者准备的 C++ 语法桥，先用熟悉的面向对象概念解释模板、`explicit`、`inline`、`typename`、友元和运算符重载。
 - `002_cpp_language_mechanisms_in_reference_project.md`：进阶阅读，从参考项目反推模板、`typename`、`inline`、`explicit`、友元、迭代器、编译链接和可移植性。建议先读 `003`，再读本篇。
+- `004_easyx_frontend_from_zero.md`：从零解释像素、事件循环、只读快照、中序布局和 EasyX 绘图，配套当前最简窗口前端。
