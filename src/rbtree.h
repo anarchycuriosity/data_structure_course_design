@@ -9,14 +9,16 @@
 #include <iterator>
 #include <vector>
 
-// 【阅读导航】
-// 这是一个“类模板 + 头文件实现”的红黑树。建议按下面顺序阅读：
-// 1. 先看 RBTree 的公开接口 contains/insert/remove；
-// 2. 再看普通二叉搜索树部分 lookup/insert；
-// 3. 然后看旋转 leftRotate/rightRotate；
-// 4. 最后看颜色修复 adjustInsert/adjustRemove。
-// template <typename T> 表示“先写一份树的结构，使用时再把 T 替换成 int、char 等具体类型”。
-// 模板的完整定义通常必须放在头文件中，因为编译器实例化 RBTree<int> 时需要看到全部实现。
+// 这份代码为什么声明和实现全部写在头文件里？
+// 因为RBTree不是一个已经确定类型的类，而是一张等待T被替换的模板。
+// 当外面写RBTree<int>时，编译器才开始制造int版本的树，这时它必须同时看见成员函数的完整实现。
+// 如果只把声明留在这里、把模板实现藏进普通cpp，编译器制造RBTree<int>时就会找不到函数体。
+//
+// 阅读时先不要同时啃颜色修复和模板语法，可以按这个顺序：
+// 1. contains、insert、remove：先看使用者能做什么。
+// 2. lookup和普通insert：先把它当普通二叉搜索树。
+// 3. leftRotate、rightRotate：理解父子指针怎么换位置。
+// 4. adjustInsert、adjustRemove：最后看颜色为什么需要跟着结构一起修复。
 
 #ifdef DEBUG
 #include <assert.h>
@@ -32,8 +34,9 @@ template <typename T>
 class RBTree
 {
    private:
-    // 节点作为私有嵌套类：树的使用者只操作 RBTree，不应直接修改节点颜色和指针。
-    // 这是一种封装设计，可缩小“能破坏红黑树不变量”的代码范围。
+    // 为什么节点类放在RBTree内部而且还是private？
+    // 因为外面真正需要的是“插入一个值”和“删除一个值”，不是随便改某个节点的颜色和孩子。
+    // 一旦外部能直接写node->left或者node->color，红黑树的五条性质就完全无法保证。
     class RBTreeNode
     {
        private:
@@ -44,25 +47,26 @@ class RBTree
             DOUBLE_BLACK = 2,
         };
 
-        T key;        // 节点保存的值；T 至少需要支持 ==、< 和 > 比较。
-        Color color;  // 颜色不是装饰，而是维护从根到叶子黑高一致的状态信息。
+        T key;        // T虽然可以换成别的类型，但是这个类型必须能进行==、<、>比较
+        Color color;  // 颜色不是界面颜色，它是判断黑高和红红冲突时真正参与算法的状态
 
-        RBTreeNode* parent;  // 父指针让旋转和删除修复可以向上回溯。
+        RBTreeNode* parent;  // 修复过程需要不断往祖先走，所以节点必须知道自己的父亲
         RBTreeNode* left;
         RBTreeNode* right;
-        // 节点需要在旋转后更新整棵树的 root，因此保存所属树指针。
-        // 这是用每个节点多一个指针，换取节点内部操作根指针的便利。
+        // 为什么每个节点还要保存tree？
+        // 普通旋转只改局部父子关系，但是当被旋转的节点正好是总根时，还必须修改RBTree自己的root。
+        // 节点拿着所属树的地址，旋转到总根时才能写tree->root。
         RBTree<T>* tree;
 
        public:
         RBTreeNode(const T key, RBTree<T>* tree);
         RBTreeNode(const T key, RBTreeNode* parent, RBTree<T>* tree, Color color);
-        // virtual 允许通过基类指针析构派生对象；本项目并没有继承节点，实际可不必使用。
-        // 保留它是尊重上游实现，学习时不要把“析构函数一律 virtual”当成规则。
+        // 这里的virtual不是红黑树算法需要的。
+        // 只有通过基类指针删除派生类对象时，虚析构才是必须的；当前节点没有继承层次，所以它属于上游保留写法。
         virtual ~RBTreeNode();
 
-        // friend 只开放私有成员访问权，不代表继承。
-        // 外层类在 C++ 中不会自动获得嵌套类的私有访问权，因此这里显式授权。
+        // friend不是继承，它只是允许指定的类直接访问本类private成员。
+        // RBTree需要读写节点的key、color和指针，iterator也需要读取key，所以这里单独给它们权限。
         friend class RBTree<T>;
         friend class iterator;
 
@@ -73,8 +77,8 @@ class RBTree
         void dumpNode(ofstream& graphFile);
 #endif
 
-        // const 表示该成员函数不会修改当前节点；inline 允许函数在头文件中被多处包含而不违反定义规则。
-        // 编译器是否真的展开函数由优化器决定，inline 不是“强制提升性能”的命令。
+        // isBlack后面的const是在承诺：这个检查只看颜色，不会修改当前节点。
+        // inline不等于强制把函数展开，它更重要的作用是允许这种定义放在头文件中被多个cpp包含。
         inline bool isBlack() const { return (this->color == BLACK); }
         inline void adjustInsert(RBTreeNode* insertNode);
         inline void adjustRemove();
@@ -84,14 +88,13 @@ class RBTree
         RBTreeNode* lookup(const T key);
         bool insert(const T key);
         void remove();
-    }* root;  // 这种写法等价于先结束 RBTreeNode 类定义，再声明 RBTreeNode* root。
+    }* root;  // 这里看起来很挤，其实就是结束RBTreeNode类之后，顺便声明RBTreeNode* root
 
    public:
-    // 这是提供给“界面层”的只读节点快照。
-    //
-    // 为什么不直接把 RBTreeNode 改成 public？
-    // 因为界面一旦能修改 parent、left、right、color，就可能轻易破坏红黑树。
-    // 快照只复制绘图需要的数据，不暴露真实指针，前端因此只能“看”，不能“改”。
+    // 为什么画图还需要一个VisualizationNode？
+    // 因为真正的RBTreeNode是private，直接公开它虽然省事，但是前端也会获得修改颜色和指针的能力。
+    // 这里把键值、颜色、父子关系复制成下标，相当于给前端一张照片。
+    // 照片可以看出树长什么样，但是不能反过来改动真正的树。
     struct VisualizationNode
     {
         T key;
@@ -111,7 +114,7 @@ class RBTree
     };
 
     RBTree();
-    // 当前类同样没有派生用法，virtual 不是必需；这是参考项目原有设计。
+    // RBTree当前也没有作为基类使用，所以这里的virtual同样不是算法必需，只是保留上游接口。
     virtual ~RBTree();
 
     bool contains(const T key);
@@ -131,21 +134,21 @@ class RBTree
         RBTreeNode* node = nullptr;
 
        public:
-        // 这些 typedef 是迭代器的“类型说明书”，标准库算法会通过它们了解迭代器。
+        // 这些typedef是在告诉标准库：这个迭代器指向什么类型、解引用得到什么、属于哪一级迭代器。
         typedef T value_type;
         typedef const T& reference;
         typedef const T* pointer;
         typedef std::input_iterator_tag iterator_category;
         friend class RBTree<T>;
 
-        // explicit 禁止把 RBTreeNode* 悄悄隐式转换成 iterator。
-        // 例如 iterator it = node_ptr 会被拒绝，必须明确写 iterator(node_ptr)，意图更清楚。
-        // 冒号后的 node(_node) 是成员初始化列表，在进入构造函数体之前初始化成员。
+        // explicit的作用是禁止RBTreeNode*在不知不觉中变成iterator。
+        // 加上它以后必须明确写iterator(node_ptr)，不能写iterator it = node_ptr。
+        // node(_node)是成员初始化列表，构造函数体还没开始执行时，node就已经初始化完成。
         explicit iterator(RBTreeNode* _node) : node(_node) {}
-        // implicit copy constructor
+        // 这里没有手写拷贝构造函数，所以编译器会生成默认拷贝构造函数。
 
-        // operator++ 是运算符重载：让自定义迭代器可以像指针一样写 ++it。
-        // 前置 ++ 返回引用；后置 ++ 需要保存旧值并按值返回，所以通常成本更高。
+        // operator++让自定义iterator也可以写++it和it++。
+        // 前置++直接移动自己并返回自己；后置++必须先保留旧副本，所以通常多一次复制。
         iterator& operator++();
         inline iterator operator++(int)
         {
@@ -165,7 +168,7 @@ class RBTree
     iterator end();
 };
 
-// Tree nodes
+// 下面开始写RBTreeNode每个成员函数的实现。
 template <typename T>
 RBTree<T>::RBTreeNode::RBTreeNode(const T key, RBTree<T>* tree)  // 只有键和树的构造函数
 {
@@ -205,12 +208,13 @@ RBTree<T>::RBTreeNode::~RBTreeNode()  // 节点的析构函数
 template <typename T>
 typename RBTree<T>::RBTreeNode* RBTree<T>::RBTreeNode::lookup(const T key)
 {
-    // 返回类型前的 typename 告诉编译器：RBTree<T>::RBTreeNode 是依赖模板参数 T 的“类型”，
-    // 不是静态变量。没有它，编译器在模板尚未实例化时无法正确解析这段语法。
+    // 为什么返回类型前还要写typename？
+    // RBTree<T>::RBTreeNode依赖T，在T还没确定时，编译器不能肯定后面这个名字代表类型还是静态成员。
+    // typename就是提前告诉编译器：别把它当变量或者乘法表达式，它确定是一个类型。
     RBTreeNode* node = this;
 
-    // 保持一个明确的搜索状态 node：目标更大就向右，目标更小就向左。
-    // 循环结束只有两种状态：node 指向命中的节点，或为 NULL 表示不存在。
+    // node表示我现在站在哪个节点。
+    // key更大就往右走，key更小就往左走；循环结束时要么正好找到，要么走到了NULL。
     while (node != NULL && node->key != key)
     {
         node = node->key < key ? node->right : node->left;
@@ -222,21 +226,24 @@ typename RBTree<T>::RBTreeNode* RBTree<T>::RBTreeNode::lookup(const T key)
 template <typename T>
 bool RBTree<T>::RBTreeNode::insert(const T key)
 {
-    // 第一阶段只按 BST 规则寻找空位；第二阶段由 adjustInsert 恢复红黑性质。
-    // 将“结构插入”和“颜色修复”解耦后，每个函数只处理一种约束。
+    // 插入被拆成两件事：
+    // 先完全按照二叉搜索树规则找到空位，再让adjustInsert处理颜色和旋转。
+    // 如果边找位置边修颜色，当前节点到底代表“搜索位置”还是“冲突位置”会非常混乱。
     RBTreeNode* node = this;
     bool nodeInserted = false;
 
     while (!nodeInserted)
     {
-        // 该实现把树当作集合，不保存重复键。
+        // key相同就返回false，因为这棵树按集合处理，不保存重复值。
         if (node->key == key) return false;
 
         if (node->key < key)
         {
             if (node->right == NULL)
             {
-                // 新节点染红不会立刻增加任一路径的黑高；代价是可能产生“红父红子”。
+                // 为什么新节点先染红？
+                // 染黑会让这一条路径立刻多一个黑节点；染红不会改变黑高，只可能制造红父红子的局部冲突。
+                // 局部冲突可以通过换色和旋转修复，比整条路径黑高失衡更容易控制。
                 node->right = new RBTreeNode(key, node, tree, RED);
                 adjustInsert(node->right);
                 nodeInserted = true;
@@ -271,30 +278,31 @@ bool RBTree<T>::RBTreeNode::insert(const T key)
 template <typename T>
 void RBTree<T>::RBTreeNode::adjustInsert(RBTreeNode* insertNode)
 {
-    // 插入修复的状态变量 node 表示“当前需要检查红冲突的子树根”。
-    // 修复按终止条件、叔叔红、叔叔黑三类处理；只有叔叔红会把问题继续向祖先传播。
+    // node不是永远指最初插入的节点，它表示“当前这一轮需要检查冲突的位置”。
+    // 叔叔为红时问题会被换色推到祖父，所以node也要跟着向上移动。
     RBTreeNode* node = insertNode;
 
     while (true)
     {
         if (node->parent == NULL)
         {
-            // 情况 1：冲突传播到根。根染黑即可结束；所有路径同时多一个黑节点，黑高仍相等。
+            // node已经走到根就直接染黑。
+            // 根出现在所有路径上，所以所有路径同时增加一个黑节点，彼此黑高仍然相等。
             node->color = BLACK;
             return;
         }
         else if (node->parent->color == BLACK)
         {
-            // 情况 2：父亲为黑，没有红红冲突，结构和黑高均合法。
+            // 父亲是黑色时没有红红相连，新节点又没有改变黑高，所以不用继续修。
             return;
         }
         else
         {
 #ifdef DEBUG
-            // red nodes always have a parent
+            // 当前父亲是红色，而根一定是黑色，所以红色父亲上面一定还存在祖父。
             assert(node->parent->parent != NULL);
 
-            // the parent of red nodes is always black
+            // 修复开始前树是合法的，因此这个红色父亲的父亲原本一定是黑色。
             assert(node->parent->parent->color == BLACK);
 #endif
 
@@ -302,22 +310,22 @@ void RBTree<T>::RBTreeNode::adjustInsert(RBTreeNode* insertNode)
             RBTreeNode* grand = node->parent->parent;
             RBTreeNode* uncle = (grand->left == parent) ? grand->right : grand->left;
 
-            // 情况 3：父亲和叔叔都红。
-            // 父、叔染黑，祖父染红；祖父子树内部黑高不变，但祖父可能与其父亲继续冲突。
+            // 父亲和叔叔都红时，两边可以一起染黑，保证左右同时增加一个黑节点。
+            // 祖父再染红抵消这一层增加的黑色，但是祖父可能和更上面的红色父亲发生新冲突。
             if (uncle != NULL && uncle->color == RED)
             {
                 parent->color = BLACK;
                 uncle->color = BLACK;
                 grand->color = RED;
 
-                // adjust the tree for the grand parent
+                // 冲突已经被推到祖父，下一轮应该从祖父继续检查。
                 node = grand;
                 continue;
             }
             else
             {
-                // 情况 4：父红、叔黑（NULL 也按黑处理）。
-                // 若 node-parent-grand 是折线，先旋转父亲把它拉直；随后旋转祖父并交换父祖颜色。
+                // 叔叔为黑时不能只换色，否则左右黑高会不一样，所以必须借助旋转改变结构。
+                // 如果node、parent、grand形成折线，就先旋转parent把折线拉成直线，再旋转grand。
 
                 if (grand->left != NULL && node == grand->left->right)
                 {
@@ -332,13 +340,13 @@ void RBTree<T>::RBTreeNode::adjustInsert(RBTreeNode* insertNode)
                     node = node->right;
                 }
 
-                // Update pointers after the rotation
+                // 前一次旋转已经改变了身份，所以这里不能继续相信旧的parent和grand变量。
                 // 为什么需要更新，因为旋转完了之后，parent被转到了下面了，它只是有着parent的名字，但其实不是真正的parent了
                 // node的parent才是真正的parent，因为bridge才代表正确的关系，以node为参照进行更改即可
                 parent = node->parent;         // 这样从上到下的顺序再次变回grand -> parent -> node
                 grand = node->parent->parent;  // 其实这句没有必要写。。
 
-                // The node will not be a subtree of the grandparent
+                // node在parent左边说明最终是LL形，反之就是RR形。
                 if (node == parent->left)
                 {
                     grand->rightRotate();
@@ -359,15 +367,16 @@ template <typename T>
 void RBTree<T>::RBTreeNode::leftRotate()
 {
 #ifdef DEBUG
-    // the right node will be the new parent
+    // 左旋要求右孩子存在，因为右孩子马上要上升成这一小块的新根。
     assert(this->right != NULL);
 #endif
 
-    // 左旋终局：this 的右孩子 root 上升，this 下沉为 root 的左孩子。
-    // 旋转前：parent -> this -> root，且 root 的左子树夹在 this 与 root 的键之间。
+    // 左旋最后想得到的结构是：右孩子root上升，this下沉到root左边。
+    // root原来的左子树数值在this和root之间，所以它只能改挂到this右边，不能丢掉。
     RBTreeNode* root = this->right;
 
-    // 先收养中间子树，再让 root 收养 this。顺序很重要，否则可能丢失 root->left。
+    // 一定先让this接住root的左子树，再让root的left改成this。
+    // 如果顺序反过来，原来的root->left已经被覆盖，中间子树就再也找不到了。
     this->right = root->left;  // 这里的left非常重要，因为它的值的范围被严格限制在了this和root之间
     // 所以可以作为新的根
     // 这里不要有直线的概念，因为直线与否是更大的层面需要考虑的
@@ -378,7 +387,7 @@ void RBTree<T>::RBTreeNode::leftRotate()
     root->left = this;
     root->parent = this->parent;
 
-    // 把原外部父亲指向新的局部根 root；若 this 原来是左孩子，root 仍占左槽位。
+    // 局部里面旋转完还不够，外面的父亲原来指向this，现在必须改成指向root。
 
     // 这里一定要注意把出现的节点的各个成员都改了
     // 比如this和root的父亲左右孩子
@@ -396,7 +405,7 @@ void RBTree<T>::RBTreeNode::leftRotate()
         }
     }
 
-    // 中间子树改挂到 this 右侧后，也必须反向更新它的 parent。
+    // 中间子树虽然被this接住了，但是它自己的parent还指着旧位置，所以反向指针也要补上。
     if (this->right != NULL)
     {
         this->right->parent = this;
@@ -404,7 +413,7 @@ void RBTree<T>::RBTreeNode::leftRotate()
 
     this->parent = root;
 
-    // 若旋转发生在总根，外部父亲不存在，必须更新整棵树的 root。
+    // root没有父亲说明这次旋转发生在整棵树顶端，此时还必须修改tree->root。
     if (root->parent == NULL)
     {
         tree->root = root;
@@ -415,18 +424,18 @@ template <typename T>
 void RBTree<T>::RBTreeNode::rightRotate()
 {
 #ifdef DEBUG
-    // the left node will be the new parent
+    // 右旋要求左孩子存在，因为左孩子马上要上升成这一小块的新根。
     assert(this->left != NULL);
 #endif
 
-    // 右旋是左旋的镜像：this 的左孩子 root 上升，this 下沉为 root 的右孩子。
+    // 右旋完全是左旋的镜像：左孩子root上升，this下沉到root右边。
     RBTreeNode* root = this->left;
 
     this->left = root->right;
     root->right = this;
     root->parent = this->parent;
 
-    // update the child link
+    // 外部父亲原来指向this，旋转后应该改为指向新的局部根root。
     if (this->parent != NULL)
     {
         if (this->parent->left == this)
@@ -439,7 +448,7 @@ void RBTree<T>::RBTreeNode::rightRotate()
         }
     }
 
-    // update the parent link
+    // root原来的右子树现在挂到this左边，它自己的parent也要改成this。
     if (this->left != NULL)
     {
         this->left->parent = this;
@@ -447,7 +456,7 @@ void RBTree<T>::RBTreeNode::rightRotate()
 
     this->parent = root;
 
-    // set the new root of the tree
+    // 如果新局部根已经没有父亲，说明它同时也是整棵树的新根。
     if (root->parent == NULL)
     {
         tree->root = root;
@@ -457,14 +466,13 @@ void RBTree<T>::RBTreeNode::rightRotate()
 template <typename T>
 void RBTree<T>::RBTreeNode::remove()
 {
-    // 删除先把“两个孩子”转化为“至多一个孩子”，再处理颜色亏损。
-    // 状态变量 node 才是最终从结构中摘除的节点，可能并不是最初的 this。
+    // 删除两个孩子的节点很麻烦，所以先找后继，把问题转成删除“至多一个孩子”的节点。
+    // node表示最后真正从指针结构里摘掉的节点，它不一定还是最初收到remove的this。
     RBTreeNode* node = this;
 
     if (this->left != NULL && this->right != NULL)
     {
-        // For the 2 child case we will convert the problem into 1 or 0 childs
-        // Therefore find the minimum element in the right subtree
+        // 两个孩子时去右子树找最小值，也就是中序遍历中的下一个节点。
 
         node = this->right;
 
@@ -473,7 +481,8 @@ void RBTree<T>::RBTreeNode::remove()
             node = node->left;
         }
 
-        // 后继是右子树最小值。这里只复制 key，并不交换节点位置，可避免大量父子指针修改。
+        // 这里只把后继的key复制到this，不交换两个完整节点。
+        // 如果交换节点，parent、left、right和颜色都要一起处理，指针关系会复杂很多。
         this->key = node->key;
     }
 
@@ -502,21 +511,24 @@ void RBTree<T>::RBTreeNode::remove()
         child->parent = node->parent;
     }
 
-    // 删除红节点不会改变黑高；删除黑节点则必须补偿少掉的一个黑色。
+    // 红节点不计入黑高，所以删红节点不会让路径少黑色。
+    // 删黑节点才需要考虑怎样把少掉的黑色补回来。
     if (node->color == BLACK)
     {
-        // When the child is red change the color to black
+        // 黑节点只有一个红孩子时，让红孩子染黑就正好补回被删除的一个黑色。
         if (child != NULL && child->color == RED)
         {
             child->color = BLACK;
         }
         else
         {
-            // 被删节点与替代孩子都黑。此实现创建临时 DOUBLE_BLACK 哨兵，把抽象的“黑高亏 1”
-            // 变成一个真实节点状态，修复完成后再移除。注意 (T)0 要求 T 能由 0 构造，削弱了泛型性。
+            // 被删节点是黑色，替代位置又没有红孩子可以直接补偿，这条路径就少了一个黑色。
+            // 代码创建一个临时DOUBLE_BLACK节点，把“这里欠一个黑色”变成真正能沿父指针移动的状态。
+            // 注意(T)0要求T可以由0构造，所以这个实现并不是对任意类型都完全通用。
             child = new RBTreeNode((T)0, node->parent, node->tree, DOUBLE_BLACK);
 
-            // 把临时双黑节点挂回原槽位，使 adjustRemove 能通过 parent 找到兄弟。
+            // 临时节点必须挂回被删除节点原来的位置。
+            // 只有这样adjustRemove才能通过parent判断自己是左孩子还是右孩子，并找到真正的兄弟。
             if (node->parent == NULL)
             {
                 node->tree->root = child;
@@ -532,7 +544,7 @@ void RBTree<T>::RBTreeNode::remove()
 
             child->adjustRemove();
 
-            // Detach the pseudo node from the tree
+            // 双黑修复结束以后，临时节点已经没有意义，需要再从树上摘掉。
             if (child->parent == NULL)
             {
                 child->tree->root = NULL;
@@ -550,7 +562,8 @@ void RBTree<T>::RBTreeNode::remove()
         }
     }
 
-    // 节点析构会递归 delete 左右子树。摘除单个 node 前必须断开孩子，避免误删仍在树中的子树。
+    // RBTreeNode析构时会继续delete左右子树。
+    // 这里只想删除node自己，所以必须先把left和right断开，否则仍留在树中的孩子也会被递归删除。
     node->left = NULL;
     node->right = NULL;
     delete node;
@@ -559,7 +572,8 @@ void RBTree<T>::RBTreeNode::remove()
 template <typename T>
 void RBTree<T>::RBTreeNode::adjustRemove()
 {
-// node 表示当前承担“额外一个黑色”的位置。目标是消除额外黑色，或把它向根传播后在根吸收。
+// node表示当前哪一个位置背着“额外一个黑色”。
+// 修复要么在局部把这个额外黑色抵消，要么继续把它往父亲方向推，最后由根吸收。
 #ifdef DEBUG
     assert(this->color == DOUBLE_BLACK);
 #endif
@@ -570,7 +584,7 @@ void RBTree<T>::RBTreeNode::adjustRemove()
     {
         if (node->parent == NULL)
         {
-            // node is the root node
+            // 双黑已经推到根时，根直接恢复成普通黑色就可以结束。
             node->color = BLACK;
             return;
         }
@@ -578,8 +592,8 @@ void RBTree<T>::RBTreeNode::adjustRemove()
         RBTreeNode* parent = node->parent;
         RBTreeNode* sibling = (node == node->parent->left) ? node->parent->right : node->parent->left;
 
-        // 预处理：红兄弟不能直接套用后续黑兄弟规则。
-        // 交换父兄颜色并旋转，把局面转化为“兄弟为黑”的标准形态。
+        // 兄弟为红时，它的孩子一定是黑色。
+        // 先交换父亲和兄弟颜色并旋转，目的不是直接结束，而是把局面转成后面统一处理的黑兄弟。
         if (sibling->color == RED)
         {
             sibling->color = BLACK;
@@ -597,7 +611,8 @@ void RBTree<T>::RBTreeNode::adjustRemove()
             }
         }
 
-        // 父黑、兄黑、兄弟两子也黑：兄弟染红可抵消 node 的额外黑，但父亲因此成为新的双黑位置。
+        // 父亲、兄弟和两个侄子都是黑色时，兄弟染红相当于兄弟那条路径少一个黑色。
+        // 两边暂时重新相等，但是亏损被推到了父亲，所以node要继续向上走。
         if (parent->color == BLACK && (sibling->left == NULL || sibling->left->color == BLACK) &&
             (sibling->right == NULL || sibling->right->color == BLACK))
         {
@@ -606,7 +621,8 @@ void RBTree<T>::RBTreeNode::adjustRemove()
             continue;
         }
 
-        // 父红、兄黑、兄弟两子黑：父亲的红可直接补偿亏损，父染黑、兄染红后结束。
+        // 父亲是红色时就有一个可以直接拿来补偿的颜色。
+        // 父亲染黑、兄弟染红之后，两边黑高重新相等，而且不需要继续往上推。
         if (parent->color == RED && (sibling->left == NULL || sibling->left->color == BLACK) &&
             (sibling->right == NULL || sibling->right->color == BLACK))
         {
@@ -615,7 +631,8 @@ void RBTree<T>::RBTreeNode::adjustRemove()
             return;
         }
 
-        // 近侄红、远侄黑：先旋转兄弟，把近侄变成新的黑兄弟，为最终旋转做准备。
+        // 近侄红、远侄黑还不能直接围绕父亲做最终旋转。
+        // 先旋转兄弟，把红色近侄送到外侧，转成远侄为红的标准情况。
         if (node == parent->left && (sibling->right == NULL || sibling->right->color == BLACK))
         {
             sibling->color = RED;
@@ -623,7 +640,7 @@ void RBTree<T>::RBTreeNode::adjustRemove()
             sibling->rightRotate();
             sibling = sibling->parent;
 
-            // Black sibling with the siblings right child red
+            // 当前分支处理的是镜像情况：黑兄弟的右孩子为红。
         }
         else if (node == parent->right && (sibling->left == NULL || sibling->left->color == BLACK))
         {
@@ -633,7 +650,8 @@ void RBTree<T>::RBTreeNode::adjustRemove()
             sibling = sibling->parent;
         }
 
-        // 最终形态：黑兄弟的远侄为红。围绕父亲旋转，并重新着色，一次消除双黑。
+        // 黑兄弟的远侄为红时已经到最终形态。
+        // 围绕父亲旋转，再让新的局部根继承原父亲颜色，就能一次把双黑消掉。
         sibling->color = parent->color;
         parent->color = BLACK;
 
@@ -655,16 +673,16 @@ void RBTree<T>::RBTreeNode::adjustRemove()
 template <typename T>
 bool RBTree<T>::RBTreeNode::invariant()
 {
-    // 验证器把“我觉得修好了”转成可重复检查的客观条件。
-    // 它检查红节点孩子、局部 BST 顺序、左右黑高，并递归检查所有后代。
-    // If a node is red then both children are black
+    // invariant不是修复函数，它只是检查现在这棵树到底合不合法。
+    // 红节点不能连红孩子、左小右大、左右黑高相同，这三类条件都满足后再递归检查孩子。
+    // 如果当前节点是红色，它的两个非空孩子都必须是黑色。
     bool invColor =
         (color == BLACK) || ((left == NULL || left->color == BLACK) && (right == NULL || right->color == BLACK));
 
-    // Left nodes have a lower order and right nodes a higher order
+    // 左孩子必须比自己小，右孩子必须比自己大。
     bool invOrder = (left == NULL || left->key < this->key) && (right == NULL || right->key > this->key);
 
-    // Every path to a leaf node contains the same number of black nodes
+    // 左右两边到叶子的黑节点数量必须相同。
     bool blackNodeCount = invariantBlackNodes() > -1;
 
     return invColor && invOrder && blackNodeCount && (left == NULL || left->invariant()) &&
@@ -674,19 +692,19 @@ bool RBTree<T>::RBTreeNode::invariant()
 template <typename T>
 int RBTree<T>::RBTreeNode::invariantBlackNodes()
 {
-    // Empty Nodes will be treated as black nodes
+    // NULL叶子按照红黑树定义也算黑色，所以空位置的黑高从1开始。
     int leftCount = (this->left == NULL) ? 1 : this->left->invariantBlackNodes();
 
     int rightCount = (this->right == NULL) ? 1 : this->right->invariantBlackNodes();
 
-    // when the black node count differs -1 will be returned
+    // 左右黑高不同就返回-1，让错误状态一路向上传播。
     return (leftCount == rightCount && leftCount != -1) ? leftCount + this->color : -1;
 }
 
 template <typename T>
 void RBTree<T>::RBTreeNode::toString(ostream& buffer, const string& prefix, bool lastNode)
 {
-    // print the current element and the children
+    // 先输出自己，再递归输出左右孩子，prefix负责保留树枝缩进。
     buffer << prefix << (lastNode ? "└── " : "├── ") << key << (color == RED ? " (R)" : " (B)") << endl;
 
     if (left != NULL)
@@ -739,11 +757,11 @@ void RBTree<T>::RBTreeNode::dumpNode(ofstream& graphFile)
 }
 #endif
 
-// tree
+// 下面开始实现RBTree本身，不再是单个节点的内部操作。
 template <typename T>
 RBTree<T>::RBTree()
 {
-    // 空树唯一状态：root == NULL。
+    // 新树没有任何节点，所以唯一需要建立的状态就是root为NULL。
     this->root = NULL;
 }
 
@@ -759,7 +777,8 @@ RBTree<T>::~RBTree()
 template <typename T>
 bool RBTree<T>::contains(const T key)
 {
-    // RBTree 负责空树边界；非空搜索委托给节点，实现接口层与算法层分工。
+    // 空树没有节点可以调用lookup，所以RBTree先处理root为NULL。
+    // 非空时再把真正的向下搜索交给根节点。
     if (root == NULL)
     {
         return false;
@@ -815,9 +834,9 @@ std::vector<typename RBTree<T>::VisualizationNode> RBTree<T>::visualization_snap
         return snapshot;
     }
 
-    // work_nodes 与 snapshot 使用相同下标：
-    // work_nodes 保存真实节点，仅在本函数内部短暂使用；
-    // snapshot 保存复制后的安全数据，交给界面长期使用。
+    // work_nodes和snapshot为什么必须共用同一个下标？
+    // 因为snapshot不能保存真实指针，只能用数字表示父子关系。
+    // 当真实节点在work_nodes下标为3时，它复制出来的数据也放到snapshot[3]，这样孩子只需要记住数字3。
     std::vector<RBTreeNode*> work_nodes;
     work_nodes.push_back(root);
     snapshot.push_back(VisualizationNode(root->key, root->isBlack(), -1));
@@ -848,22 +867,22 @@ std::vector<typename RBTree<T>::VisualizationNode> RBTree<T>::visualization_snap
     return snapshot;
 }
 
-// iterator
+// 下面实现迭代器。这个迭代器使用后序遍历，不是std::set那种升序遍历。
 template <typename T>
 typename RBTree<T>::iterator& RBTree<T>::iterator::operator++()
 {
-    // 注意：这个迭代器执行的是“后序遍历”，并非 std::set 常见的升序中序遍历。
-    // 因而它只保证每个元素访问一次，不保证输出有序。
+    // 当前node表示迭代器现在停在哪里。
+    // 后序遍历顺序是左子树、右子树、根，所以它只保证每个节点访问一次，不保证键值升序。
     RBTreeNode* node = this->node;
 
-    // The root node is the last element
+    // 后序遍历最后才访问根，所以走到没有父亲的根以后，下一个位置就是end。
     if (node->parent == NULL)
     {
         this->node = NULL;
         return *this;
     }
 
-    // Switch to the right sibling or bubble up in the tree
+    // 如果刚走完父亲的左子树而且右兄弟存在，就转去右子树；否则说明父亲该被访问了。
     if (node == node->parent->left && node->parent->right != NULL)
     {
         node = node->parent->right;
@@ -874,7 +893,7 @@ typename RBTree<T>::iterator& RBTree<T>::iterator::operator++()
         return *this;
     }
 
-    // Descend to the next leaf node
+    // 进入右子树以后继续尽量向左、再向右下降，找到下一棵子树最先访问的叶子。
     while (true)
     {
         if (node->left != NULL)
@@ -896,7 +915,8 @@ typename RBTree<T>::iterator& RBTree<T>::iterator::operator++()
 template <typename T>
 typename RBTree<T>::iterator RBTree<T>::begin()
 {
-    // 后序遍历的第一个节点是从根尽量向左、再向右下降得到的叶子，不一定是最小键。
+    // begin要找后序遍历第一个节点，所以从根开始尽量向左走。
+    // 如果某一层没有左孩子但有右孩子，就继续走右边，直到落到叶子。
     RBTreeNode* node = root;
 
     if (node != NULL)
@@ -925,7 +945,7 @@ typename RBTree<T>::iterator RBTree<T>::end()
 template <typename T>
 bool RBTree<T>::invariant()
 {
-    // The root is empty or black
+    // 整棵树为空时天然合法；非空时先保证根为黑，再递归检查所有节点。
     return root == NULL || (root->isBlack() && root->invariant());
 }
 

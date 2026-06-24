@@ -5,15 +5,17 @@
 
 #include "rbtree.h"
 
-// 这一层属于后端：负责保存树、执行操作并计算节点位置。
-// 它完全不知道 EasyX、按钮、鼠标和颜色值。
+// 为什么需要单独再套一层TreeVisualizationModel？
+// 因为RBTree只应该关心插入、删除、颜色和旋转，它不应该知道屏幕坐标是什么。
+// EasyX前端也不应该拿到树内部的真实指针，它只需要拿到已经计算好的绘图数据。
+// 所以这一层就是桥梁：左边接RBTree，右边给EasyX提供可以直接画的节点。
 struct VisualNode
 {
-    int key;
-    bool is_black;
-    int parent_index;
-    int x;
-    int y;
+    int key;           // 圆里面需要显示的数字
+    bool is_black;     // true画黑色，false画红色
+    int parent_index;  // 父亲在vector里的下标，根节点没有父亲，所以根是-1
+    int x;             // 最后换算出来的屏幕横坐标
+    int y;             // 最后换算出来的屏幕纵坐标
 };
 
 class TreeVisualizationModel
@@ -28,6 +30,7 @@ class TreeVisualizationModel
     std::vector<VisualNode> visual_nodes() const;
 
    private:
+    // 真正维护红黑性质的是它，前端不会直接接触它。
     RBTree<int> tree;
 };
 
