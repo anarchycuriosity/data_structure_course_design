@@ -1,0 +1,8 @@
+# Binary file
+rbtree
+
+# Object files
+*.o
+
+# Dump files
+dump

@@ -5,9 +5,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 $project_root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$source_file = Join-Path $project_root "reference-projects\red-black-tree-template\main.cpp"
+$source_file = Join-Path $project_root "src\main.cpp"
 $output_directory = Join-Path $project_root "bin"
-$output_file = Join-Path $output_directory "reference_tree_tests.exe"
+$output_file = Join-Path $output_directory "red_black_tree_data_tests.exe"
 
 function Find-GnuCompiler
 {
@@ -42,7 +42,7 @@ function Find-GnuCompiler
         }
     }
 
-    throw "没有找到 g++.exe，无法构建参考项目测试。"
+    throw "没有找到 g++.exe，无法构建红黑树数据测试。"
 }
 
 $compiler = Find-GnuCompiler -RequestedCompiler $CompilerPath
@@ -65,7 +65,7 @@ Write-Host "使用编译器：$compiler"
 
 if ($LASTEXITCODE -ne 0)
 {
-    throw "参考项目测试构建失败。"
+    throw "红黑树数据测试构建失败。"
 }
 
-Write-Host "测试程序构建成功：$output_file"
+Write-Host "红黑树数据测试构建成功：$output_file"

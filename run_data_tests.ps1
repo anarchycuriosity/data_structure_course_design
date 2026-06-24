@@ -1,9 +1,9 @@
 $ErrorActionPreference = "Stop"
 
 $project_root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$test_program = Join-Path $project_root "bin\reference_tree_tests.exe"
+$test_program = Join-Path $project_root "bin\red_black_tree_data_tests.exe"
 
-& (Join-Path $project_root "build_reference_tests.ps1")
+& (Join-Path $project_root "build_data_tests.ps1")
 
 if (-not (Test-Path $test_program))
 {
@@ -14,5 +14,5 @@ if (-not (Test-Path $test_program))
 
 if ($LASTEXITCODE -ne 0)
 {
-    throw "参考项目测试未全部通过。"
+    throw "红黑树数据测试未全部通过。"
 }

@@ -27,18 +27,21 @@ VS Code 操作：
 
 - `Ctrl+Shift+B`：执行默认构建任务。
 - `F5`：启动调试配置。
-- 命令面板选择 `Tasks: Run Task`，再选择 `Run Reference Tree Tests`：运行参考项目原版 39 项数据测试。
+- 命令面板选择 `Tasks: Run Task`，再选择 `Run Red-Black Tree Data Tests`：运行主项目自己的 39 项数据测试。
 
 也可以在终端运行：
 
 ```powershell
-.\run_reference_tests.ps1
+.\run_data_tests.ps1
 ```
 
-图形化入口和数据测试入口彼此独立：
+图形化入口和数据测试入口彼此独立，并且都不依赖 `reference-projects`：
 
 - `src/easyx_frontend.cpp`：EasyX 图形界面。
-- `reference-projects/red-black-tree-template/main.cpp`：原版数据测试。
+- `src/main.cpp`：从参考测试迁入主项目的数据测试。
+- `src/rbtree.h`：主项目实际使用的红黑树实现。
+
+`reference-projects/red-black-tree-template` 只是普通参考目录。它不参与编译、链接、测试或运行，删除该目录也不会影响主项目。
 
 注意：EasyX 官方 MinGW 25.9.10 不支持 UCRT MinGW。若脚本提示跳过 UCRT 编译器，需要改用 TDM-GCC/MSVCRT 工具链。
 

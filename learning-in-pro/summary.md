@@ -52,4 +52,4 @@ EasyX MinGW 25.9.10 已放入 `third_party/easyx`。VS Code 默认构建任务�
 
 若只需要演示，无需安装任何编译器：克隆仓库后运行 `run_easyx.cmd`，它会启动 `release/easyx_red_black_tree.exe`。该发行程序已静态链接所需 C++ 运行库。
 
-数据测试与图形化同时保留。运行 `run_reference_tests.ps1` 会构建并执行参考项目原版 `main.cpp` 的 39 项测试；VS Code 中也可以运行任务 `Run Reference Tree Tests`。
+数据测试与图形化同时保留。运行 `run_data_tests.ps1` 会构建并执行主项目 `src/main.cpp` 的 39 项测试；VS Code 中也可以运行任务 `Run Red-Black Tree Data Tests`。测试、图形界面和红黑树实现均不依赖 `reference-projects`。
