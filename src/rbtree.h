@@ -1,24 +1,9 @@
-// ---------------------------------------------------------------------
-// MIT License
-// Copyright (c) 2017 Henrik Peters
-// See LICENSE file in the project root for full license information.
-// ---------------------------------------------------------------------
+
 #ifndef RBTREE_H
 #define RBTREE_H
 
 #include <iterator>
 #include <vector>
-
-// 这份代码为什么声明和实现全部写在头文件里？
-// 因为RBTree不是一个已经确定类型的类，而是一张等待T被替换的模板。
-// 当外面写RBTree<int>时，编译器才开始制造int版本的树，这时它必须同时看见成员函数的完整实现。
-// 如果只把声明留在这里、把模板实现藏进普通cpp，编译器制造RBTree<int>时就会找不到函数体。
-//
-// 阅读时先不要同时啃颜色修复和模板语法，可以按这个顺序：
-// 1. contains、insert、remove：先看使用者能做什么。
-// 2. lookup和普通insert：先把它当普通二叉搜索树。
-// 3. leftRotate、rightRotate：理解父子指针怎么换位置。
-// 4. adjustInsert、adjustRemove：最后看颜色为什么需要跟着结构一起修复。
 
 #ifdef DEBUG
 #include <assert.h>
@@ -104,11 +89,7 @@ class RBTree
         int right_index;
 
         VisualizationNode(const T& node_key, bool node_is_black, int node_parent_index)
-            : key(node_key),
-              is_black(node_is_black),
-              parent_index(node_parent_index),
-              left_index(-1),
-              right_index(-1)
+            : key(node_key), is_black(node_is_black), parent_index(node_parent_index), left_index(-1), right_index(-1)
         {
         }
     };
@@ -490,7 +471,8 @@ void RBTree<T>::RBTreeNode::remove()
     //  此时 node 至多有一个孩子；三目运算符选择那个非空孩子，二者都空则得到 NULL。
     RBTreeNode* child = (node->left == NULL) ? node->right : node->left;
 
-    // 这里主要是把child和node连起来
+    // 这里主要是把child去到node的位置
+    // 如果node没有父母，也就是根，和它是父母的左右孩子都需要判断
     if (node->parent == NULL)
     {
         node->tree->root = child;
@@ -503,6 +485,9 @@ void RBTree<T>::RBTreeNode::remove()
     {
         node->parent->right = child;
     }
+
+    // node的父亲连接child和child连接node要分开来做
+    // 因为node的父亲不管child是不是null都会连上它，但如果child是null则不要连node的父亲
 
     // 反正我们要删除node，那就让node的父亲成为child的父亲
     // 此时node的parent依然连着parent
@@ -569,6 +554,7 @@ void RBTree<T>::RBTreeNode::remove()
     delete node;
 }
 
+// 这个函数用来处理被删除节点的孩子也是黑的情况
 template <typename T>
 void RBTree<T>::RBTreeNode::adjustRemove()
 {
@@ -690,14 +676,21 @@ bool RBTree<T>::RBTreeNode::invariant()
 }
 
 template <typename T>
-int RBTree<T>::RBTreeNode::invariantBlackNodes()
+int RBTree<T>::RBTreeNode::
+    invariantBlackNodes()  // 这里使用返回值来记录我们要找的数值，因为黑高和每个节点都有关系，每个节点都有任务
 {
     // NULL叶子按照红黑树定义也算黑色，所以空位置的黑高从1开始。
+    // 如果是null那就是根节点了，它是1
+    // leftcount不是当前栈帧的黑节点数，而是递归得到的左子树的黑节点数
+    // 递到根节点，左右count都是1，符合要求返回，归到上一层
+    // 左子树找完去找右子树
     int leftCount = (this->left == NULL) ? 1 : this->left->invariantBlackNodes();
 
     int rightCount = (this->right == NULL) ? 1 : this->right->invariantBlackNodes();
 
     // 左右黑高不同就返回-1，让错误状态一路向上传播。
+    // 因为已经保证了左右黑高相同了，所以只需要拿左边的结果就好了
+    // this节点是局部的交会点
     return (leftCount == rightCount && leftCount != -1) ? leftCount + this->color : -1;
 }
 

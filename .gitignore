@@ -1,2 +1,4 @@
 bin/*.exe
 *.obj
+reference-projects/
+~$*.pptx
