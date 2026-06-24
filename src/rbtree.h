@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------
-// 本文件沿用 Henrik Peters 于 2017 年发布的 MIT 许可证。
-// 完整许可证内容见项目根目录 LICENSE。
+// MIT License
+// Copyright (c) 2017 Henrik Peters
+// See LICENSE file in the project root for full license information.
 // ---------------------------------------------------------------------
 #ifndef RBTREE_H
 #define RBTREE_H
@@ -19,6 +20,12 @@
 
 #ifdef DEBUG
 #include <assert.h>
+
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+using namespace std;
 #endif
 
 template <typename T>
@@ -62,12 +69,8 @@ class RBTree
 #ifdef DEBUG
         bool invariant();
         int invariantBlackNodes();
-
-        // 原参考项目用于终端字符串和 Graphviz 文件输出，当前 EasyX 前端不再使用。
-#if 0
-        void toString(std::ostream& buffer, const std::string& prefix, bool lastNode);
-        void dumpNode(std::ofstream& graphFile);
-#endif
+        void toString(ostream& buffer, const string& prefix, bool lastNode);
+        void dumpNode(ofstream& graphFile);
 #endif
 
         // const 表示该成员函数不会修改当前节点；inline 允许函数在头文件中被多处包含而不违反定义规则。
@@ -118,12 +121,8 @@ class RBTree
 
 #ifdef DEBUG
     bool invariant();
-
-    // 已由 EasyX 可视化替代，不参与当前项目编译。
-#if 0
-    void dumpTree(std::string dumpName = "dump");
-    std::string toString();
-#endif
+    void dumpTree(string dumpName = "dump");
+    string toString();
 #endif
 
     class iterator
@@ -143,6 +142,8 @@ class RBTree
         // 例如 iterator it = node_ptr 会被拒绝，必须明确写 iterator(node_ptr)，意图更清楚。
         // 冒号后的 node(_node) 是成员初始化列表，在进入构造函数体之前初始化成员。
         explicit iterator(RBTreeNode* _node) : node(_node) {}
+        // implicit copy constructor
+
         // operator++ 是运算符重载：让自定义迭代器可以像指针一样写 ++it。
         // 前置 ++ 返回引用；后置 ++ 需要保存旧值并按值返回，所以通常成本更高。
         iterator& operator++();
@@ -164,7 +165,7 @@ class RBTree
     iterator end();
 };
 
-// 节点实现
+// Tree nodes
 template <typename T>
 RBTree<T>::RBTreeNode::RBTreeNode(const T key, RBTree<T>* tree)  // 只有键和树的构造函数
 {
@@ -290,8 +291,10 @@ void RBTree<T>::RBTreeNode::adjustInsert(RBTreeNode* insertNode)
         else
         {
 #ifdef DEBUG
+            // red nodes always have a parent
             assert(node->parent->parent != NULL);
 
+            // the parent of red nodes is always black
             assert(node->parent->parent->color == BLACK);
 #endif
 
@@ -307,6 +310,7 @@ void RBTree<T>::RBTreeNode::adjustInsert(RBTreeNode* insertNode)
                 uncle->color = BLACK;
                 grand->color = RED;
 
+                // adjust the tree for the grand parent
                 node = grand;
                 continue;
             }
@@ -328,11 +332,13 @@ void RBTree<T>::RBTreeNode::adjustInsert(RBTreeNode* insertNode)
                     node = node->right;
                 }
 
+                // Update pointers after the rotation
                 // 为什么需要更新，因为旋转完了之后，parent被转到了下面了，它只是有着parent的名字，但其实不是真正的parent了
                 // node的parent才是真正的parent，因为bridge才代表正确的关系，以node为参照进行更改即可
                 parent = node->parent;         // 这样从上到下的顺序再次变回grand -> parent -> node
                 grand = node->parent->parent;  // 其实这句没有必要写。。
 
+                // The node will not be a subtree of the grandparent
                 if (node == parent->left)
                 {
                     grand->rightRotate();
@@ -353,6 +359,7 @@ template <typename T>
 void RBTree<T>::RBTreeNode::leftRotate()
 {
 #ifdef DEBUG
+    // the right node will be the new parent
     assert(this->right != NULL);
 #endif
 
@@ -408,6 +415,7 @@ template <typename T>
 void RBTree<T>::RBTreeNode::rightRotate()
 {
 #ifdef DEBUG
+    // the left node will be the new parent
     assert(this->left != NULL);
 #endif
 
@@ -418,6 +426,7 @@ void RBTree<T>::RBTreeNode::rightRotate()
     root->right = this;
     root->parent = this->parent;
 
+    // update the child link
     if (this->parent != NULL)
     {
         if (this->parent->left == this)
@@ -430,6 +439,7 @@ void RBTree<T>::RBTreeNode::rightRotate()
         }
     }
 
+    // update the parent link
     if (this->left != NULL)
     {
         this->left->parent = this;
@@ -437,6 +447,7 @@ void RBTree<T>::RBTreeNode::rightRotate()
 
     this->parent = root;
 
+    // set the new root of the tree
     if (root->parent == NULL)
     {
         tree->root = root;
@@ -452,6 +463,8 @@ void RBTree<T>::RBTreeNode::remove()
 
     if (this->left != NULL && this->right != NULL)
     {
+        // For the 2 child case we will convert the problem into 1 or 0 childs
+        // Therefore find the minimum element in the right subtree
 
         node = this->right;
 
@@ -492,6 +505,7 @@ void RBTree<T>::RBTreeNode::remove()
     // 删除红节点不会改变黑高；删除黑节点则必须补偿少掉的一个黑色。
     if (node->color == BLACK)
     {
+        // When the child is red change the color to black
         if (child != NULL && child->color == RED)
         {
             child->color = BLACK;
@@ -518,6 +532,7 @@ void RBTree<T>::RBTreeNode::remove()
 
             child->adjustRemove();
 
+            // Detach the pseudo node from the tree
             if (child->parent == NULL)
             {
                 child->tree->root = NULL;
@@ -555,6 +570,7 @@ void RBTree<T>::RBTreeNode::adjustRemove()
     {
         if (node->parent == NULL)
         {
+            // node is the root node
             node->color = BLACK;
             return;
         }
@@ -607,6 +623,7 @@ void RBTree<T>::RBTreeNode::adjustRemove()
             sibling->rightRotate();
             sibling = sibling->parent;
 
+            // Black sibling with the siblings right child red
         }
         else if (node == parent->right && (sibling->left == NULL || sibling->left->color == BLACK))
         {
@@ -640,11 +657,14 @@ bool RBTree<T>::RBTreeNode::invariant()
 {
     // 验证器把“我觉得修好了”转成可重复检查的客观条件。
     // 它检查红节点孩子、局部 BST 顺序、左右黑高，并递归检查所有后代。
+    // If a node is red then both children are black
     bool invColor =
         (color == BLACK) || ((left == NULL || left->color == BLACK) && (right == NULL || right->color == BLACK));
 
+    // Left nodes have a lower order and right nodes a higher order
     bool invOrder = (left == NULL || left->key < this->key) && (right == NULL || right->key > this->key);
 
+    // Every path to a leaf node contains the same number of black nodes
     bool blackNodeCount = invariantBlackNodes() > -1;
 
     return invColor && invOrder && blackNodeCount && (left == NULL || left->invariant()) &&
@@ -654,17 +674,19 @@ bool RBTree<T>::RBTreeNode::invariant()
 template <typename T>
 int RBTree<T>::RBTreeNode::invariantBlackNodes()
 {
+    // Empty Nodes will be treated as black nodes
     int leftCount = (this->left == NULL) ? 1 : this->left->invariantBlackNodes();
 
     int rightCount = (this->right == NULL) ? 1 : this->right->invariantBlackNodes();
 
+    // when the black node count differs -1 will be returned
     return (leftCount == rightCount && leftCount != -1) ? leftCount + this->color : -1;
 }
 
-#if 0
 template <typename T>
 void RBTree<T>::RBTreeNode::toString(ostream& buffer, const string& prefix, bool lastNode)
 {
+    // print the current element and the children
     buffer << prefix << (lastNode ? "└── " : "├── ") << key << (color == RED ? " (R)" : " (B)") << endl;
 
     if (left != NULL)
@@ -716,9 +738,8 @@ void RBTree<T>::RBTreeNode::dumpNode(ofstream& graphFile)
     }
 }
 #endif
-#endif
 
-// 树实现
+// tree
 template <typename T>
 RBTree<T>::RBTree()
 {
@@ -827,7 +848,7 @@ std::vector<typename RBTree<T>::VisualizationNode> RBTree<T>::visualization_snap
     return snapshot;
 }
 
-// 迭代器实现
+// iterator
 template <typename T>
 typename RBTree<T>::iterator& RBTree<T>::iterator::operator++()
 {
@@ -835,12 +856,14 @@ typename RBTree<T>::iterator& RBTree<T>::iterator::operator++()
     // 因而它只保证每个元素访问一次，不保证输出有序。
     RBTreeNode* node = this->node;
 
+    // The root node is the last element
     if (node->parent == NULL)
     {
         this->node = NULL;
         return *this;
     }
 
+    // Switch to the right sibling or bubble up in the tree
     if (node == node->parent->left && node->parent->right != NULL)
     {
         node = node->parent->right;
@@ -851,6 +874,7 @@ typename RBTree<T>::iterator& RBTree<T>::iterator::operator++()
         return *this;
     }
 
+    // Descend to the next leaf node
     while (true)
     {
         if (node->left != NULL)
@@ -901,10 +925,10 @@ typename RBTree<T>::iterator RBTree<T>::end()
 template <typename T>
 bool RBTree<T>::invariant()
 {
+    // The root is empty or black
     return root == NULL || (root->isBlack() && root->invariant());
 }
 
-#if 0
 template <typename T>
 void RBTree<T>::dumpTree(string dumpName)
 {
@@ -949,6 +973,5 @@ string RBTree<T>::toString()
     return buffer.str();
 }
 #endif
-#endif
 
-#endif
+#endif /* RBTREE_H */
